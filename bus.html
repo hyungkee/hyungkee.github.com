@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<body>
+
+<p>버스 시간 예측 프로그램</p>
+
+<div ng-app="myApp" ng-controller="myCtrl">
+
+	<div style="border-style: dotted; border-width : 1px;">
+		번호 : 
+		<select ng-model="bus" ng-options="x.busRouteNm for x in busNumList">
+		</select>
+
+		<br>
+
+		구간 : 
+		<select ng-model="stationStart" ng-options="x.stationNm for x in stationList">
+		</select>
+		~
+		<select ng-model="stationEnd" ng-options="x.stationNm for x in stationList">
+		</select>
+
+		{{isStationUpdatedString}}
+
+
+		<br>
+		기한 : <input type="text" ng-model="dateStart"> ~ <input type="text" ng-model="dateEnd">
+
+		<br>
+		<input type="button" value="월">
+		<input type="button" value="화">
+		<input type="button" value="수">
+		<input type="button" value="목">
+		<input type="button" value="금">
+		<input type="button" value="토">
+		<input type="button" value="일">
+
+		<br>
+		공휴일 제외 : <input type="checkbox" ng-model="officialHoliday">
+
+	</div>
+
+
+	<br>
+
+	<button onclick="alert('조회');">조회</button>
+
+	<br>
+	<br>
+	<div style="border-style: dotted; border-width : 1px;">
+		조회 결과 : {{resultNum}}건
+		<br>
+		graph here.
+	</div>
+
+</div>
+
+<script>
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope, $http) {
+//    $scope.busNumList = [{id:"123", name:"bus1"}, {id:"234", name:"bus2"}];
+//    $scope.stationList = [{id:"123", name:"사당"}, {id:"234", name:"낙성대"}];
+
+    $scope.resultNum = 0;
+
+    $http.get("https://pdwpnpwzo0.execute-api.ap-northeast-2.amazonaws.com/btm/bus")
+    .then(function(response) {
+        $scope.busNumList = response.data;
+    });
+
+    $scope.$watch('bus', function(newValue, oldValue)
+    {
+    	if(newValue != undefined){
+    		$scope.isStationUpdatedString = "(갱신중..)";
+		    $http.get("https://pdwpnpwzo0.execute-api.ap-northeast-2.amazonaws.com/btm/bus/" + $scope.bus.busRouteId + "/stations")
+		    .then(function(response) {
+		        $scope.isStationUpdatedString = "(갱신완료)";
+		        $scope.stationList = response.data;
+		    });
+    	}
+
+    }, true);
+});
+
+</script>
+
+</body>
+</html>
