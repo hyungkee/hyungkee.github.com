@@ -4,6 +4,8 @@
 	<title>premium tracker chart</title>
 </head>
 
+<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+
 <!-- Load c3.css -->
 <link href="chart/c3/c3.min.css" rel="stylesheet">
 
@@ -14,31 +16,56 @@
 <div id="chart"></div>
 
 <script type="text/javascript">
+var myRows = [
+        ['x', 'data1', 'data2']
+        ]
+
 var chart = c3.generate({
     bindto: '#chart',
 
 data: {
         x: 'x',
-//        xFormat: '%Y%m%d', // 'xFormat' can be used as custom format of 'x'
-
-		url: 'chart/test.json',
-		mimeType: 'json'
-        // columns: [
-        //     ['x', '2013-01-01', '2013-01-02', '2013-01-03', '2013-01-04', '2013-01-05', '2013-01-06'],
-        //     // ['x', '20130101', '20130102', '20130103', '20130104', '20130105', '20130106'],
-        //     ['data1', 30, 200, 100, 400, 150, 250],
-        //     ['data2', 130, 340, 200, 500, 250, 350]
-        // ]
+        rows: myRows
     },
     axis: {
         x: {
             type: 'timeseries',
             tick: {
-                format: '%Y-%m-%d'
+                format: '%Y-%m-%d %H:%M:%S'
             }
+        }
+    },
+    grid: {
+        y: {
+            show: true
         }
     }
 });
+
+endTime = Math.floor(new Date().getTime() / 1000);
+startTime = endTime - 3 * 24 * 60 * 60; // 3 days
+unitTime = 50; // 100 seconds
+dataURL = 'http://ec2-13-125-16-108.ap-northeast-2.compute.amazonaws.com:8080/premium/between/' + startTime + '/' + endTime + '/unit/' + unitTime;
+tickURL = '';
+$.getJSON(dataURL, function(data) {
+
+    for(i=0;i<data.length;i++){
+        var date = data[i].date;
+        var premiumPercent = data[i].premiumPercent;
+        var healthy = data[i].healthy;
+
+        if(healthy == true){
+            var rowDate = date;
+            var rowData = premiumPercent;
+            myRows.push([rowDate, rowData]);
+        }
+    }
+
+    chart.load({
+        rows: myRows
+    })
+});
+
 </script>
 
 
