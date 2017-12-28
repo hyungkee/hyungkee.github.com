@@ -16,55 +16,81 @@
 <div id="chart"></div>
 
 <script type="text/javascript">
-var myRows = [
-        ['x', 'data1', 'data2']
-        ]
+    var myRows = [
+    ['x', 'data1', 'data2']
+    ]
 
-var chart = c3.generate({
-    bindto: '#chart',
+    var myChart = c3.generate({
+        bindto: '#chart',
 
-data: {
-        x: 'x',
-        rows: myRows
-    },
-    axis: {
-        x: {
-            type: 'timeseries',
-            tick: {
-                format: '%Y-%m-%d %H:%M:%S'
+        data: {
+            x: 'x',
+            rows: myRows
+        },
+        axis: {
+            x: {
+                type: 'timeseries',
+                tick: {
+                    format: '%Y-%m-%d %H:%M:%S'
+                }
+            }
+        },
+        grid: {
+            y: {
+                show: true
             }
         }
-    },
-    grid: {
-        y: {
-            show: true
-        }
-    }
-});
+    });
 
 endTime = Math.floor(new Date().getTime() / 1000);
-startTime = endTime - 3 * 24 * 60 * 60; // 3 days
-unitTime = 50; // 100 seconds
+//startTime = endTime - 10 * 60 * 60;
+startTime = endTime - 1 * 24 * 60 * 60; // 1 days
+unitTime = 60; // 1 minute
+lastId = 0;
+
+function appendDataToRows(data, rows){
+    var date = data.date;
+    var premiumPercent = data.premiumPercent;
+    var healthy = data.healthy;
+    var id = data.id;
+
+    if(healthy == true){
+        var rowDate = new Date(new Date(date).getTime() + 9*1000*60*60); // UTC+9
+        var rowData = premiumPercent;
+        rows.push([rowDate, rowData]);
+    }
+}
+
+function loadRows(chart, rows){
+    chart.load({
+        rows: rows
+    })
+}
+
 dataURL = 'http://ec2-13-125-16-108.ap-northeast-2.compute.amazonaws.com:8080/premium/between/' + startTime + '/' + endTime + '/unit/' + unitTime;
-tickURL = '';
 $.getJSON(dataURL, function(data) {
 
     for(i=0;i<data.length;i++){
-        var date = data[i].date;
-        var premiumPercent = data[i].premiumPercent;
-        var healthy = data[i].healthy;
-
-        if(healthy == true){
-            var rowDate = date;
-            var rowData = premiumPercent;
-            myRows.push([rowDate, rowData]);
-        }
+        appendDataToRows(data[i], myRows);
+        lastId = data[i].id;
     }
 
-    chart.load({
-        rows: myRows
-    })
+    loadRows(myChart, myRows);
 });
+
+setInterval(function(){
+    tickURL = 'http://ec2-13-125-16-108.ap-northeast-2.compute.amazonaws.com:8080/premium/after/' + lastId + '/unit/' + unitTime;
+    $.getJSON(tickURL, function(data){
+
+        for(i=0;i<data.length;i++){
+            appendDataToRows(data[i], myRows);
+            lastId = data[i].id;
+        }
+
+        loadRows(myChart, myRows);
+    })
+
+}, unitTime * 1000);
 
 </script>
 
