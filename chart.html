@@ -16,16 +16,37 @@
 <div id="chart"></div>
 
 <script type="text/javascript">
-    var myRows = [
-    ['x', 'data1', 'data2']
-    ]
+
+    var premiumColumnX = ['x1'];
+    var premiumColumnY = ['premium'];
+    var krwColumnX = ['x2'];
+    var krwColumnY = ['KRW_BTC'];
+    // var usdtColumnX = ['x3'];
+    // var usdtColumnY = ['USDT_BTC'];
 
     var myChart = c3.generate({
         bindto: '#chart',
-
         data: {
-            x: 'x',
-            rows: myRows
+            // x: 'x',
+            // rows: myRows,
+            xs: {
+                'premium': 'x1',
+                'KRW_BTC': 'x2',
+                // 'USDT_BTC': 'x3',
+            },
+            columns: [
+            ],
+            axes: {
+                'premium' : 'y',
+                'KRW_BTC' : 'y2',
+                // USDT_BTC : 'y2',
+            },
+            types:{
+                // 'premium' : 'step',
+                // 'KRW_BTC' : 'step',
+                'premium' : 'line',
+                'KRW_BTC' : 'line',
+            }
         },
         axis: {
             x: {
@@ -33,7 +54,13 @@
                 tick: {
                     format: '%Y-%m-%d %H:%M:%S'
                 }
-            }
+            },
+            y:{
+                show: true
+            },
+            y2:{
+                show:true
+            },
         },
         grid: {
             y: {
@@ -46,9 +73,27 @@ endTime = Math.floor(new Date().getTime() / 1000);
 //startTime = endTime - 10 * 60 * 60;
 startTime = endTime - 1 * 24 * 60 * 60; // 1 days
 unitTime = 60; // 1 minute
-lastId = 0;
 
-function appendDataToRows(data, rows){
+function loadRows(){
+    myChart.load({
+        // rows: rows
+        columns: [
+            premiumColumnX,
+            premiumColumnY,
+            krwColumnX,
+            krwColumnY,
+            // usdtColumnX,
+            // usdtColumnY
+        ],
+    })
+}
+
+
+
+/* premium value getters */
+lastPremiumId = 0;
+
+function appendPremiumDataToColumns(data, colX, colY){
     var date = data.date;
     var premiumPercent = data.premiumPercent;
     var healthy = data.healthy;
@@ -57,40 +102,108 @@ function appendDataToRows(data, rows){
     if(healthy == true){
         var rowDate = new Date(new Date(date).getTime() + 9*1000*60*60); // UTC+9
         var rowData = premiumPercent;
-        rows.push([rowDate, rowData]);
+        // rows.push([rowDate, rowData, rowData * rowData]);
+        colX.push(rowDate);
+        colY.push(rowData);
     }
-}
-
-function loadRows(chart, rows){
-    chart.load({
-        rows: rows
-    })
 }
 
 dataURL = 'http://ec2-13-125-16-108.ap-northeast-2.compute.amazonaws.com:8080/premium/between/' + startTime + '/' + endTime + '/unit/' + unitTime;
 $.getJSON(dataURL, function(data) {
 
     for(i=0;i<data.length;i++){
-        appendDataToRows(data[i], myRows);
-        lastId = data[i].id;
+        appendPremiumDataToColumns(data[i], premiumColumnX, premiumColumnY);
+        lastPremiumId = data[i].id;
     }
 
-    loadRows(myChart, myRows);
+    loadRows();
 });
 
 setInterval(function(){
-    tickURL = 'http://ec2-13-125-16-108.ap-northeast-2.compute.amazonaws.com:8080/premium/after/' + lastId + '/unit/' + unitTime;
+    tickURL = 'http://ec2-13-125-16-108.ap-northeast-2.compute.amazonaws.com:8080/premium/after/' + lastPremiumId + '/unit/' + unitTime;
     $.getJSON(tickURL, function(data){
 
         for(i=0;i<data.length;i++){
-            appendDataToRows(data[i], myRows);
-            lastId = data[i].id;
+            appendPremiumDataToColumns(data[i], premiumColumnX, premiumColumnY);
+            lastPremiumId = data[i].id;
         }
 
-        loadRows(myChart, myRows);
+        loadRows();
     })
 
 }, unitTime * 1000);
+
+
+
+/* krw-btc price value getters */
+lastKrwId = 0;
+
+function appendPriceDataToColumns(data, colX, colY, mulRate){
+    var date = data.date;
+    var price = data.price;
+    var healthy = data.healthy;
+    var id = data.id;
+
+    if(healthy == true){
+        var rowDate = new Date(new Date(date).getTime() + 9*1000*60*60); // UTC+9
+        var rowData = price * mulRate;
+        // rows.push([rowDate, rowData, rowData * rowData]);
+        colX.push(rowDate);
+        colY.push(rowData);
+    }
+}
+dataURL = 'http://ec2-13-125-16-108.ap-northeast-2.compute.amazonaws.com:8080/price/KRW-BTC/between/' + startTime + '/' + endTime + '/unit/' + unitTime;
+$.getJSON(dataURL, function(data) {
+
+    for(i=0;i<data.length;i++){
+        appendPriceDataToColumns(data[i], krwColumnX, krwColumnY, 1);
+        lastKrwId = data[i].id;
+    }
+
+    loadRows();
+});
+
+setInterval(function(){
+    tickURL = 'http://ec2-13-125-16-108.ap-northeast-2.compute.amazonaws.com:8080/price/KRW-BTC/after/' + lastKrwId + '/unit/' + unitTime;
+    $.getJSON(tickURL, function(data){
+
+        for(i=0;i<data.length;i++){
+            appendPriceDataToColumns(data[i], krwColumnX, krwColumnY, 1);
+            lastKrwId = data[i].id;
+        }
+
+        loadRows();
+    })
+
+}, unitTime * 1000);
+
+/* usdt-btc price value getters */
+// lastUsdtId = 0;
+
+// dataURL = 'http://ec2-13-125-16-108.ap-northeast-2.compute.amazonaws.com:8080/price/USDT-BTC/between/' + startTime + '/' + endTime + '/unit/' + unitTime;
+// $.getJSON(dataURL, function(data) {
+
+//     for(i=0;i<data.length;i++){
+//         appendPriceDataToColumns(data[i], usdtColumnX, usdtColumnY, 1100);
+//         lastUsdtId = data[i].id;
+//     }
+
+//     loadRows();
+// });
+
+// setInterval(function(){
+//     tickURL = 'http://ec2-13-125-16-108.ap-northeast-2.compute.amazonaws.com:8080/price/USDT-BTC/after/' + lastUsdtId + '/unit/' + unitTime;
+//     $.getJSON(tickURL, function(data){
+
+//         for(i=0;i<data.length;i++){
+//             appendPriceDataToColumns(data[i], usdtColumnX, usdtColumnY, 1100);
+//             lastUsdtId = data[i].id;
+//         }
+
+//         loadRows();
+//     })
+
+// }, unitTime * 1000);
 
 </script>
 
